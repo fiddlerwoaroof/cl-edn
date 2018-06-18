@@ -16,7 +16,8 @@
 
 (defsystem :cl-edn/fset
   :depends-on (#:cl-edn
-               #:fset)
+               #:fset
+               #:fwoar.lisputils)
   :components ((:file "fset-synthesize")))
 
 (defsystem :cl-edn/test

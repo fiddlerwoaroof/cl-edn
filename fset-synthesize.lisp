@@ -45,3 +45,8 @@
     (make-symbol (if ns
                      (format nil "~a/~a" ns name)
                      (format nil "~a" name)))))
+
+(defmethod synthesize-compound (implementation (discriminator (eql :tagged)) args)
+  (destructuring-bind (sym obj) args
+    (list :tagged (synthesize-compound implementation (car sym) (cdr sym))
+          (synthesize implementation obj))))
