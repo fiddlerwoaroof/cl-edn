@@ -1,14 +1,3 @@
-(defpackage :edn
-  (:use :cl :smug)
-  (:export ))
-(defpackage :edn-primitives
-  (:use)
-  (:export :nil :true :false))
-
-(defconstant edn-primitives:nil 'edn-primitives:nil)
-(defconstant edn-primitives:true 'edn-primitives:true)
-(defconstant edn-primitives:false 'edn-primitives:false)
-
 (in-package :edn)
 
 (defun .satisfies (predicate &rest args)
@@ -63,6 +52,27 @@
 (defun .alt (&rest r)
   (reduce '.plus r))
 
+(defun .compound-element-start ()
+  (.or (.string= "#{")
+       (.char= #\{)
+       (.char= #\[)
+       (.char= #\()
+       (.char= #\{)))
+
+(defun .compound-element-finish (closing)
+  (lambda ()
+    (.prog1 (.first (.elements))
+            (.s)
+            (.char= closing))))
+
+(defun .map-element ()
+  (.prog2 (.char= #\{)
+          (.progn (.s)
+                  (.zero-or-more (.let* ((first (.prog1 (.element) (.s)))
+                                         (second (.prog1 (.element) (.s))))
+                                   (.identity (list :pair first second)))))
+          (.char= #\})))
+
 (defun .element ()
   (.or (.or (.nil)
             (.boolean))
@@ -73,28 +83,23 @@
              (.string)
              
              (.let* ((pairs
-                      (.prog2 (.char= #\{)
-                              (.progn (.s)
-                                      (.zero-or-more (.let* ((first (.prog1 (.element) (.s)))
-                                                             (second (.prog1 (.element) (.s))))
-                                                       (.identity (list :pair first second)))))
-                              (.char= #\}))))
+                      (.map-element)))
                (.identity (cons :map pairs)))
              (.let* ((pairs
                       (.prog2 (.string= "#{")
-                              (.elements)
+                              (.first (.elements))
                               (.s)
                               (.char= #\}))))
                (.identity (cons :set pairs)))
              (.let* ((pairs
                       (.prog2 (.char= #\[)
-                              (.elements)
+                              (.first (.elements))
                               (.s)
                               (.char= #\]))))
                (.identity (cons :vector pairs)))
              (.let* ((pairs
                       (.prog2 (.char= #\()
-                              (.elements)
+                              (.first (.elements))
                               (.s)
                               (.char= #\)))))
                (.identity (cons :list pairs)))
@@ -164,37 +169,12 @@
        (.satisfies (lambda (x)
                      (or (digit-char-p x)
                          (member x '(#\# #\:)))))))
-(defun .number ()
-  (.or (.float)
-       (.integer)))
-
 (defun apply-sign (sign num)
   (if sign
       (ecase sign
         (#\+ num)
         (#\- (* -1 num)))
       num))
-
-(defun .integer ()
-  (.let* ((sign (.optional
-                 (.or (.char= #\+)
-                      (.char= #\-))))
-          (num (.cardinal))
-          (flag (.optional (.char= #\N))))
-    flag
-    (.identity (apply-sign sign num))))
-
-(defun .float ()
-  (.let* ((sign (.optional
-                 (.or (.char= #\+)
-                      (.char= #\-))))
-          (num (.cardinal))
-          (frac (.frac-exp)))
-    (destructuring-bind (mant exp) frac
-      (.identity (apply-sign sign (* (+ num mant)
-                                     (if exp
-                                         (expt 10 exp)
-                                         1)))))))
 
 (defun .frac-exp ()
   (.alt (.let* ((frac (.frac))
@@ -225,8 +205,49 @@
                                 (floor
                                  (1+ (log num
                                           10))))))
-                   'float))
+                   'double-float))
          0))))
+
+(defun .one-of (items &optional (test 'eql))
+  (.satisfies
+   (serapeum:op
+     (member _ items :test test))))
+
+(defun interpret-number (parts)
+  (destructuring-bind (sign radix float-info flag) parts
+    (let* ((base-value (if float-info
+                           (destructuring-bind (mantissa exp) float-info
+                             (coerce (* (+ radix
+                                           (or mantissa 0))
+                                        (if exp
+                                            (expt 10 exp)
+                                            1))
+                                     'double-float))
+                           radix))
+           (signed (case sign
+                     ((#\+ nil) base-value)
+                     (#\- (- base-value)))))
+      (typecase signed
+        (integer (if (member flag '(nil #\N))
+                     (.identity signed)
+                     (.fail)))
+        (float (if (member flag '(nil #\M))
+                   (.identity signed)
+                   (.fail)))))))
+
+(defun .number ()
+  (flet ((.sign () (.one-of '(#\+ #\-))))
+    (.let* ((sign (.optional (.sign)))
+            (num (.cardinal))
+            (frac (.optional (.frac)))
+            (exp (.optional (.exp)))
+            (flag (.optional (.one-of '(#\N #\M)))))
+      (interpret-number
+       (list sign
+             num
+             (when (or frac exp)
+               (list frac exp))
+             flag)))))
 
 (defun .exp ()
   (.progn (.char-equal #\e)
@@ -237,12 +258,13 @@
             (.identity (apply-sign sign num)))))
 
 (defun .cardinal ()
-  (.let* ((nums (.first
-                 (.or (.let* ((first (.non-zero-digit))
-                              (rest (.zero-or-more (.digit))))
-                        (.identity (list* first rest)))
-                      (.let* ((c (.digit)))
-                        (.identity (list c)))))))
+  (.let* ((nums (.or (.first
+                      (.let* ((first (.non-zero-digit))
+                              (rest (.zero-or-more
+                                     (.digit))))
+                        (.identity (list* first rest))))
+                     (.let* ((c (.digit)))
+                       (.identity (list c))))))
     (.identity (parse-integer (coerce nums 'string)))))
 
 (defun .digit ()
@@ -255,7 +277,7 @@
 
 (defun .printable-character ()
   (.or (.satisfies (lambda (x) (char>= #\~ x #\!)))
-       (.satisfies (lambda (x) (>= (char-code x) #xA1)))))
+       (.satisfies (lambda (x) (char<= #\space x)))))
 
 (defun .character-name ()
   (.or (.string= "newline")
@@ -298,5 +320,13 @@
                           (.char= #\"))))
     (.identity (list :string (combine string)))))
 
-(defgeneric synthesize-compound (implementation discriminator args))
-(defgeneric synthesize (implementation args))
+(defun read-edn (s)
+  (car
+   (smug:parse (.prog1 (.elements)
+                       (.s)
+                       (.not (.item)))
+               s)))
+
+(defun parse (input &optional (realizer 'fset))
+  (synthesize realizer
+              (read-edn input)))
