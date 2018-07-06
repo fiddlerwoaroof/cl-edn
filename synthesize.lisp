@@ -35,5 +35,9 @@
 
 (defmethod synthesize-compound (implementation (discriminator (eql :tagged)) args)
   (destructuring-bind (sym obj) args
-    (list :tagged (synthesize-compound implementation (car sym) (cdr sym))
-          (synthesize implementation obj))))
+    (let ((tag (synthesize-compound implementation (car sym) (cdr sym))))
+      (alexandria:switch ((symbol-name tag) :test 'string-equal)
+        ("inst" (local-time:parse-rfc3339-timestring (synthesize implementation obj)))
+        ("uuid" (uuid:make-uuid-from-string (synthesize implementation obj)))
+        (t (list :tagged tag
+               (synthesize implementation obj)))))))

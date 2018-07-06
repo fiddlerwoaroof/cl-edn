@@ -7,6 +7,11 @@
                (.identity x)
                (.fail)))))
 
+(defun .one-of (items &optional (test 'eql))
+  (.satisfies
+   (serapeum:op
+     (member _ items :test test))))
+
 (defun .zero-or-more (parser)
   (.plus (.let* ((x parser)
                  (xs (.zero-or-more parser)))
@@ -29,11 +34,11 @@
         (.discarded-element))))
 
 (defun .whitespace ()
-  (.or (.char= #\space)
-       (.char= #\tab)
-       (.char= #\return)
-       (.char= #\newline)
-       (.char= #\,)))
+  (.one-of '(#\space
+             #\tab
+             #\return
+             #\newline
+             #\,)))
 
 (defun .comment ()
   (.let* ((result (.prog2 (.char= #\;)
@@ -73,40 +78,47 @@
                                    (.identity (list :pair first second)))))
           (.char= #\})))
 
+(defun .between (start-parser end-parser element-parser)
+  (.prog2 start-parser
+          (.first element-parser)
+          (.s)
+          end-parser))
+
+(defun .tag (tag parser)
+  (.let* ((item parser))
+    (.identity (cons tag item))))
+
+(defun .collection (tag start-parser end-parser)
+  (.tag tag
+        (.between start-parser end-parser
+                  (.elements))))
+
+(defun .primitive ()
+  (.or (.nil)
+       (.boolean)))
+
+(defun .collections ()
+  (.alt (.tag :map (.map-element))
+        (.collection :set (.string= "#{") (.char= #\}))
+        (.collection :vector (.char= #\[) (.char= #\]))
+        (.collection :list (.char= #\() (.char= #\)))))
+
+(defun .atoms ()
+  (.alt (.number)
+        (.symbol)
+        (.keyword)
+        (.character)
+        (.string)))
+
 (defun .element ()
-  (.or (.or (.nil)
-            (.boolean))
-       (.alt (.symbol)
-             (.keyword)
-             (.number)
-             (.character)
-             (.string)
+  (.or (.primitive)
+       (.alt (.atoms)
+             (.collections)
              
-             (.let* ((pairs
-                      (.map-element)))
-               (.identity (cons :map pairs)))
-             (.let* ((pairs
-                      (.prog2 (.string= "#{")
-                              (.first (.elements))
-                              (.s)
-                              (.char= #\}))))
-               (.identity (cons :set pairs)))
-             (.let* ((pairs
-                      (.prog2 (.char= #\[)
-                              (.first (.elements))
-                              (.s)
-                              (.char= #\]))))
-               (.identity (cons :vector pairs)))
-             (.let* ((pairs
-                      (.prog2 (.char= #\()
-                              (.first (.elements))
-                              (.s)
-                              (.char= #\)))))
-               (.identity (cons :list pairs)))
-             (.let* ((tag (.progn (.char= #\#) (.tag-symbol)))
-                     (element (.progn (.s) (.element))))
-               (.identity (list :tagged tag element)))
-             )))
+             (.tag :tagged
+                   (.let* ((tag (.progn (.char= #\#) (.tag-symbol)))
+                           (element (.progn (.s) (.element))))
+                     (.identity (list tag element)))))))
 
 (defun .nil ()
   (.and (.string= "nil")
@@ -149,7 +161,7 @@
                          (rest (.zero-or-more (.name-constituent))))
                    (.identity (format nil "~c~{~c~}" first rest)))
                  (.let* ((first (.name-start-2))
-                         (second (.satisfies #'alpha-char-p))
+                         (second (.satisfies (complement #'digit-char-p)))
                          (rest (.zero-or-more (.name-constituent))))
                    (.identity (format nil "~c~c~{~c~}" first second rest))))))
 
@@ -191,7 +203,6 @@
           (.identity (list 0 0)))))
 
 (defun .frac ()
-  (declare (optimize debug))
   (.let* ((nums (.first
                  (.progn (.char= #\.)
                          (.zero-or-more (.digit))))))
@@ -207,11 +218,6 @@
                                           10))))))
                    'double-float))
          0))))
-
-(defun .one-of (items &optional (test 'eql))
-  (.satisfies
-   (serapeum:op
-     (member _ items :test test))))
 
 (defun interpret-number (parts)
   (destructuring-bind (sign radix float-info flag) parts
