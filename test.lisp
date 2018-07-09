@@ -4,36 +4,39 @@
 (in-package :edn-test)
 
 (defun float-equal (a b)
-  (> 0.00001
-     (abs (- a b))))
+  (and (typep a (type-of b))
+       (typep b (type-of a))
+       (> 0.00001
+          (abs (- a b)))))
 
 (deftest floating ()
   (should be float-equal
-          0.1
-          (edn:read-edn "0.1"))
+          0.1d0
+          (edn:read-edn "0.1")
+          )
   (should be float-equal
-          0.1
+          0.1d0
           (edn:read-edn "+0.1"))
   (should be float-equal
-          -0.1
+          -0.1d0
           (edn:read-edn "-0.1"))
   (should be float-equal
-          1
+          1d0
           (edn:read-edn "0.1e1"))
   (should be float-equal
-          1
+          1d0
           (edn:read-edn "0.1e+1"))
   (should be float-equal
-          0.01
+          0.01d0
           (edn:read-edn "0.1e-1"))
   (should be float-equal
-          -0.01
+          -0.01d0
           (edn:read-edn "-0.1e-1"))
   (should be float-equal
-          -0.01
+          -0.01d0
           (edn:read-edn "-0.1e-1M"))
   (should be float-equal
-          -0.0
+          -0.0d0
           (edn:read-edn "-0.e-1M")))
 
 (deftest edn-parser ()

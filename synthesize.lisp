@@ -5,9 +5,15 @@
 
 (defgeneric synthesize (implementation args))
 (defgeneric synthesize-compound (implementation discriminator args))
+(defgeneric synthesize-tag (implementation tag args))
 
 (defmethod synthesize ((implementation symbol) discriminator)
   (synthesize (make-instance 'implementation) discriminator))
+
+(defmethod synthesize (implementation thing)
+  (typecase thing
+    (list (synthesize-compound implementation (car thing) (cdr thing)))
+    (t thing)))
 
 (defmethod synthesize-compound (implementation (discriminator (eql :keyword)) args)
   (destructuring-bind (ns name) args
@@ -39,5 +45,14 @@
       (alexandria:switch ((symbol-name tag) :test 'string-equal)
         ("inst" (local-time:parse-rfc3339-timestring (synthesize implementation obj)))
         ("uuid" (uuid:make-uuid-from-string (synthesize implementation obj)))
-        (t (list :tagged tag
-               (synthesize implementation obj)))))))
+        (t (let ((synthesized-object (synthesize implementation obj)))
+             (fw.lu:if-let* ((tag-keyword (alexandria:make-keyword
+                                           (string-upcase
+                                            (symbol-name tag))))
+                             (methods (compute-applicable-methods
+                                       #'synthesize-tag
+                                       (list implementation tag-keyword synthesized-object))))
+               
+               (synthesize-tag implementation tag-keyword synthesized-object)
+               (list :tagged tag
+                     synthesized-object))))))))

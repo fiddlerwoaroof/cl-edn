@@ -9,12 +9,6 @@
   and name to match CL's symbol behavior"))
 
 
-(defmethod synthesize ((implementation (eql 'fset-lossy)) thing)
-  (typecase thing
-    (list (synthesize-compound implementation (car thing) (cdr thing)))
-    (t thing)))
-
-
 (defmethod synthesize-compound ((implementation fset-lossy) (discriminator (eql :list)) args)
   (mapcar (lambda (a)
             (synthesize implementation a))

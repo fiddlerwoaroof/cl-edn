@@ -8,12 +8,14 @@
   :depends-on (#:alexandria
                #:uiop
                #:serapeum
-               #:smug)
-  :serial t
+               #:smug 
+               :local-time
+               :uuid)
   :in-order-to ((test-op (test-op :cl-edn/test)))
   :components ((:file "package")
-               (:file "edn")
-               (:file "synthesize")))
+               (:file "edn" :depends-on ("package" "synthesize"))
+               (:file "synthesize"
+                      :depends-on ("package"))))
 
 (defsystem :cl-edn/fset
   :depends-on (#:cl-edn

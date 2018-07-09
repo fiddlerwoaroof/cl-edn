@@ -3,13 +3,6 @@
   ()
   (:documentation "An EDN synthesizer that produces fset datastructures"))
 
-
-(defmethod synthesize ((implementation fset) thing)
-  (typecase thing
-    (list (synthesize-compound implementation (car thing) (cdr thing)))
-    (t thing)))
-
-
 (defmethod synthesize-compound ((implementation fset) (discriminator (eql :map)) args)
   (fset:convert 'fset:map
                 (mapcar (fw.lu:destructuring-lambda ((p k v))
