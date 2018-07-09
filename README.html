@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>README.html</title>
+
+</head>
+
+<body>
+
+<h1>Installation</h1>
+
+<ul>
+<li>Clone this repository somewhere ASDF can find the system: e.g. <code>git clone https://github.com/fiddlerwoaroof/cl-edn.git ~/quicklisp/local-projects/cl-edn/</code></li>
+<li>At a REPL, <code>(ql:quickload :cl-edn)</code></li>
+</ul>
+
+<h1>Usage</h1>
+
+<p>This library divides the task of parsing EDN into two stages.  In the
+first stage, implemented by <code>(EDN:READ-EDN string)</code> an EDN file is is
+parsed into an AST where primitives are converted into lisp values and
+compound forms are converted into lists of the form 
+<code>(type-specifier . data)</code>.  This AST can be passed to 
+<code>(EDN:SYNTHESIZE implementation ast)</code> to produce datastructures of a
+specific kind.  The system <code>cl-edn/fset</code> provides a synthesizer that
+produces appropriate fset datastructures. The system
+<code>cl-edn/fset-lossy</code> produces fset datastructures, but forces symbols
+and keywords to have uppercase names, for easier interoperation with
+CL's default readtable.  As a convenience, there is also 
+<code>(EDN:PARSE string &amp;optional (implementation 'fset))</code> that combines
+the two steps into a single call.  These implementations can passed to
+<code>PARSE</code> and <code>SYNTHESIZE</code> either as the symbols <code>EDN:FSET</code> and
+<code>EDN:FSET-LOSSY</code> or by instantiating the classes named by those symbols.</p>
+
+<h1>EXTENSION</h1>
+
+<p><code>EDN:SYNTHESIZE</code> is a generic function that takes an implementation as
+the first argument. The main system, <code>CL-EDN</code>, provides two
+implementations of this function: one that specializes the first
+argument on <code>SYMBOL</code>, that just makes an instance of the class named
+by <code>IMPLEMENTATION</code> and calls <code>EDN:SYNTHESIZE</code> with the instance as
+its first argument; the other implementation inspects the second
+argument and, if it is a list, it delegates to
+<code>(EDN:SYNTHESIZE-COMPOUND IMPLEMENTATION DISCRIMINATOR ARGS)</code>, the
+head of the list as <code>DISCRIMINATOR</code> and the tail as <code>ARGS</code>. The
+default implementation of this generic also provides methods for
+strings, symbols and keywords that produce the relevant lisp types, as
+well as an implementation for tagged literals that implements <code>#inst</code>
+and <code>#uuid</code> and produces a form <code>(:TAGGED TAG-SYMBOL DATA)</code> where
+<code>DATA</code> is synthesized according to the rules governing
+<code>IMPLEMENTATION</code> (e.g. the <code>FSET</code> implementation makes <code>DATA</code> to be an
+instance of the datastructures provided by the <code>FSET</code> library). Tags
+can also be added to the default implementation by providing an
+EQL-specialized method of <code>(EDN:SYNTHESIZE-TAG IMPLEMENTATION TAG ARG)</code>
+for the symbol you want to define a behavior for.  When this method is
+called, the tag-symbol will be uppercased and converted into a common
+lisp keyword and the <code>ARG</code> will have been synthesized according to the
+rules provided by <code>IMPLEMENTATION</code>.  To override this behavior, an
+implementation can override <code>EDN:SYNTHESIZE-COMPOUND</code>, but such
+implementations should either call <code>CALL-NEXT-METHOD</code> or implement
+<code>#inst</code> and <code>#uuid</code> processing themselves.</p>
+
+</body>
+</html>

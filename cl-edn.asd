@@ -2,7 +2,7 @@
 (in-package :asdf-user)
 
 (defsystem :cl-edn 
-  :description ""
+  :description "A Common Lisp reader for EDN files"
   :author "Ed L <edward@elangley.org>"
   :license "MIT"
   :depends-on (#:alexandria
