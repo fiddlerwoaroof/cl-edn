@@ -8,7 +8,7 @@
 (defgeneric synthesize-tag (implementation tag args))
 
 (defmethod synthesize ((implementation symbol) discriminator)
-  (synthesize (make-instance 'implementation) discriminator))
+  (synthesize (make-instance implementation) discriminator))
 
 (defmethod synthesize (implementation thing)
   (typecase thing
