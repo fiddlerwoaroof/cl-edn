@@ -1,11 +1,13 @@
 (in-package :edn)
 
-
-(defgeneric convert-primitive (implementation primitive))
-
 (defgeneric synthesize (implementation args))
 (defgeneric synthesize-compound (implementation discriminator args))
 (defgeneric synthesize-tag (implementation tag args))
+
+(defun parse (input &optional (realizer 'fset))
+  (synthesize realizer
+              (read-edn input)))
+
 
 (defmethod synthesize ((implementation symbol) discriminator)
   (synthesize (make-instance implementation) discriminator))

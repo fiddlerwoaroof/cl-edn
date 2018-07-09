@@ -332,8 +332,3 @@
                        (.s)
                        (.not (.item)))
                s)))
-
-(defun parse (input &optional (realizer 'fset))
-  (synthesize realizer
-              (read-edn input)))
-

@@ -7,7 +7,8 @@
            :fset-lossy
            :convert-primitive
            :synthesize-compound
-           :synthesize-tag))
+           :synthesize-tag
+           :parse))
 
 (defpackage :edn.generate
   (:use :cl)
