@@ -5,7 +5,17 @@
      until (<= min-nodes nodes max-nodes)
      finally (return (values edn nodes))))
 
+(defvar *last-edn*)
 (defun generate-edn ()
+  (multiple-value-bind (edn nodes) (%generate-edn)
+    (values (setf *last-edn* edn)
+            nodes)))
+
+(defun last-generated ()
+  (when (boundp '*last-edn*)
+    *last-edn*))
+
+(defun %generate-edn ()
   (case (random 3)
     (0 (generate-map))
     (1 (generate-set))
@@ -124,7 +134,7 @@
 
 (defun compound-or-primitive (&optional (primitive-func 'generate-primitive))
     (case (random 10)
-      (0 (generate-edn))
+      (0 (%generate-edn))
       (1 (funcall primitive-func))
       (2 (funcall primitive-func))
       (3 (funcall primitive-func))

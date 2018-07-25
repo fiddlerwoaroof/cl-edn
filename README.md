@@ -2,10 +2,42 @@ Installation
 ============
 
 - Clone this repository somewhere ASDF can find the system: e.g. ```git clone https://github.com/fiddlerwoaroof/cl-edn.git ~/quicklisp/local-projects/cl-edn/```
-- At a REPL, ```(ql:quickload :cl-edn)```
+- At a REPL, ```(ql:quickload :cl-edn/fset)```
 
 Usage
 =====
+
+Conceptual Model:
+-----------------
+
+```
+                         +-------------+
+                         | SYNTHESIZER |
+                         +------+------+
+                                |
+                                V
++----------+      +----------------------------+
+| READ-EDN +----->| (PARSE string synthesizer) |
++----------+      +----------------------------+
+```
+
+Systems for Components:
+-----------------------
+
+- CL-EDN:
+    - READ-EDN
+    - PARSE
+- CL-EDN/FSET:
+    - 'EDN:FSET: a synthesizer that uses FSET datastructures but
+      preserves the case of keywords and symbols.
+- CL-EDN/FSET-LOSSY:
+    - 'EDN:FSET-LOSSY: a synthesizer that uses FSET datastructures but
+      uppercases keywords and symbols.  This is probably preferable for
+      most cases where the data is only going to be used by Common Lisp,
+      because CL symbols are uppercase by default
+
+Notes:
+------
 
 This library divides the task of parsing EDN into two stages.  In the
 first stage, implemented by `(EDN:READ-EDN string)` an EDN file is is

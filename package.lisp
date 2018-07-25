@@ -12,7 +12,9 @@
 
 (defpackage :edn.generate
   (:use :cl)
-  (:export :generate-edn))
+  (:export :generate-edn
+           :generate-edn-in-range
+           :last-generated))
 
 (defpackage :edn-primitives
   (:use)

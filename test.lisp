@@ -113,3 +113,10 @@
           (format nil "foobar~%qwer")
           "asdf"
           (smug:parse (edn::.string-ending) "foobar\\nqwer\"asdf")))
+
+(deftest smoke ()
+  (should be =
+          0
+          (loop repeat 0
+             for res = (edn:read-edn (edn.generate:generate-edn))
+             unless res sum 1)))

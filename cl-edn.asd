@@ -37,4 +37,5 @@
                     (uiop:symbol-call :st '#:test
                                       :package :edn-test))
   :components ((:file "package")
+               (:file "generate-edn")
                (:file "test")))
