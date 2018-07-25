@@ -18,14 +18,15 @@ Systems for Components:
 - CL-EDN:
     - READ-EDN
     - PARSE
-- CL-EDN/FSET:
-    - 'EDN:FSET: a synthesizer that uses FSET datastructures but
-      preserves the case of keywords and symbols.
-- CL-EDN/FSET-LOSSY:
-    - 'EDN:FSET-LOSSY: a synthesizer that uses FSET datastructures but
-      uppercases keywords and symbols.  This is probably preferable for
-      most cases where the data is only going to be used by Common Lisp,
-      because CL symbols are uppercase by default
+- Synthesizers:
+    - CL-EDN/FSET:
+        - 'EDN:FSET: a synthesizer that uses FSET datastructures but
+          preserves the case of keywords and symbols.
+    - CL-EDN/FSET-LOSSY:
+        - 'EDN:FSET-LOSSY: a synthesizer that uses FSET datastructures but
+          uppercases keywords and symbols.  This is probably preferable for
+          most cases where the data is only going to be used by Common Lisp,
+          because CL symbols are uppercase by default
 
 Notes:
 ------
