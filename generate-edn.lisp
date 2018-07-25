@@ -1,5 +1,10 @@
 (in-package :edn.generate)
 
+(defun generate-edn-in-range (min-nodes max-nodes)
+  (loop for (edn nodes) = (multiple-value-list (generate-edn))
+     until (<= min-nodes nodes max-nodes)
+     finally (return (values edn nodes))))
+
 (defun generate-edn ()
   (case (random 3)
     (0 (generate-map))
@@ -7,53 +12,59 @@
     (2 (generate-vect))))
 
 (defun generate-nil ()
-  "nil")
+  (values "nil" 1))
 
 (defun prim-generate-char ()
   (code-char (+ 32 (random #.(- 128 32)))))
 
 (defun generate-string ()
-  (loop with limit = (random 25)
-     repeat limit
-     collect (prim-generate-char) into chars
-     finally (return (format nil "\"~a\""
-                             (serapeum:string-replace-all "\""
-                                                          (serapeum:string-replace-all
-                                                           "\\"
-                                                           (coerce chars 'string)
-                                                           "\\\\")
-                                                          "\\\"")))))
+  (values (loop with limit = (random 25)
+             repeat limit
+             collect (prim-generate-char) into chars
+             finally (return (format nil "\"~a\""
+                                     (serapeum:string-replace-all "\""
+                                                                  (serapeum:string-replace-all
+                                                                   "\\"
+                                                                   (coerce chars 'string)
+                                                                   "\\\\")
+                                                                  "\\\""))))
+          1))
 
 (defun generate-int ()
-  (princ-to-string (- (random 20000)
-                      10000)))
+  (values (princ-to-string (- (random 20000)
+                              10000))
+          1))
 
 (defun flip-coin ()
   (= 1 (random 2)))
 
 (defun generate-float ()
-  (format nil "~[~;-~;+~]~a.~:[~;~:*~a~]~:[~;e~:*~a~]"
-          (random 3)
-          (if (flip-coin)
-              (random 10000)
-              0)
-          (when (flip-coin)
-            (random 10000))
-          (when (flip-coin)
-            (- (random 100)
-               50))))
+  (values (format nil "~[~;-~;+~]~a.~:[~;~:*~a~]~:[~;e~:*~a~]~:[~;M~]"
+                  (random 3)
+                  (if (flip-coin)
+                      (random 10000)
+                      0)
+                  (when (flip-coin)
+                    (random 10000))
+                  (when (flip-coin)
+                    (- (random 100)
+                       50))
+                  (flip-coin))
+          1))
 
 (defun generate-character ()
-  (format nil "\\~c" (prim-generate-char)))
+  (values (format nil "\\~c" (prim-generate-char))
+          1))
 
 (defun generate-bool ()
-  (if (flip-coin)
-      "true"
-      "false"))
+  (values (if (flip-coin)
+              "true"
+              "false")
+          1))
 
 (defmacro comment (&body b)
   (declare (ignore b))
-  (values))
+  (format nil ";foobar~%"))
 
 (comment
   (or (alpha-char-p x)
@@ -89,14 +100,16 @@
      finally (return (coerce chars 'string))))
 
 (defun generate-symbol ()
-  (let ((ns (generate-name 5))
-        (name (generate-name 20)))
-    (if (flip-coin)
-        name
-        (format nil "~a/~a" ns name))))
+  (values (let ((ns (generate-name 5))
+                (name (generate-name 20)))
+            (if (flip-coin)
+                name
+                (format nil "~a/~a" ns name)))
+          1))
 
 (defun generate-keyword ()
-  (format nil ":~a" (generate-symbol)))
+  (values (format nil ":~a" (generate-symbol))
+          1))
 
 (defun generate-primitive ()
   (case (random 8)
@@ -134,34 +147,44 @@
 
 (defun generate-map (&optional (key-func 'not-float) (value-func 'compound-or-primitive))
   (loop
+     with nodes = 0
      with keys = (fset:set)
      repeat (random 10)
-     for key = (loop for next = (funcall key-func)
+     for key = (loop for (next key-nodes) = (multiple-value-list (funcall key-func))
                   until (not (fset:contains? keys next))
+                  do (incf nodes key-nodes)
                   finally
                     (fset:includef keys next)
                     (return next))
-     for value = (funcall value-func)
+     for (value value-nodes) = (multiple-value-list (funcall value-func))
+     do (incf nodes value-nodes)
      collect (format nil "~a ~a" key value) into res
-     finally (return (format nil "{~{~{~a~^~[ ~;, ~;,~; ,~]~}~}}"
-                             (mapcar (serapeum:op (list _1 (random 3)))
-                                     (remove-duplicates res :test 'equal))))))
+     finally (return (values (format nil "{~{~{~a~^~[ ~;, ~;,~; ,~]~}~}}"
+                                     (mapcar (serapeum:op (list _1 (random 3)))
+                                             (remove-duplicates res :test 'equal)))
+                             nodes))))
 
 
 (defun generate-set (&optional (value-func 'not-float))
   (loop
+     with nodes = 0
      repeat (random 19)
-     for value = (funcall value-func)
+     for (value value-nodes) = (multiple-value-list (funcall value-func))
      collect value into res
-     finally (return (format nil "#{~{~{~a~^~[ ~;, ~;,~; ,~]~}~}}"
-                             (mapcar (serapeum:op (list _1 (random 3)))
-                                     (remove-duplicates res :test 'equal))))))
+     do (incf nodes value-nodes)
+     finally (return (values (format nil "#{~{~{~a~^~[ ~;, ~;,~; ,~]~}~}}"
+                                     (mapcar (serapeum:op (list _1 (random 3)))
+                                             (remove-duplicates res :test 'equal)))
+                             nodes))))
 
 (defun generate-vect (&optional (value-func 'compound-or-primitive))
   (loop
+     with nodes = 0
      repeat (random 19)
-     for value = (funcall value-func)
+     for (value value-nodes) = (multiple-value-list (funcall value-func))
      collect value into res
-     finally (return (format nil "[~{~{~a~^~[ ~;, ~;,~; ,~]~}~}]"
-                             (mapcar (serapeum:op (list _1 (random 3)))
-                                     res)))))
+     do (incf nodes value-nodes)
+     finally (return (values (format nil "[~{~{~a~^~[ ~;, ~;,~; ,~]~}~}]"
+                                     (mapcar (serapeum:op (list _1 (random 3)))
+                                             res))
+                             nodes))))
