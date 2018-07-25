@@ -10,17 +10,6 @@ Usage
 Conceptual Model:
 -----------------
 
-```
-                         +-------------+
-                         | SYNTHESIZER |
-                         +------+------+
-                                |
-                                V
-+----------+      +----------------------------+
-| READ-EDN +----->| (PARSE string synthesizer) |
-+----------+      +----------------------------+
-```
-
 ![component diagram](diagram.svg?raw=true&sanitize=true "component diagram")
 
 Systems for Components:
