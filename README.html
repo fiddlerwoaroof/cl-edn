@@ -33,6 +33,15 @@
 +----------+      +----------------------------+
 </code></p>
 
+<p><img src='https://g.gravizo.com/svg?
+ digraph G {
+   node p [label="(PARSE string synthesizer)"];
+   READ-EDN &lt;- p;
+   READ-EDN -> SYNTHESIZER;
+   SYNTHESIZER -> p;
+ }
+'/></p>
+
 <h2>Systems for Components:</h2>
 
 <ul>

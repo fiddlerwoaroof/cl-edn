@@ -21,6 +21,15 @@ Conceptual Model:
 +----------+      +----------------------------+
 ```
 
+<img src='https://g.gravizo.com/svg?
+ digraph G {
+   node p [label="(PARSE string synthesizer)"];
+   READ-EDN <- p;
+   READ-EDN -> SYNTHESIZER;
+   SYNTHESIZER -> p;
+ }
+'/>
+
 Systems for Components:
 -----------------------
 
