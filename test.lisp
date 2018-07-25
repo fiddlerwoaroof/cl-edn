@@ -33,6 +33,9 @@
           -0.01d0
           (edn:read-edn "-0.1e-1"))
   (should be float-equal
+          0d0
+          (edn:read-edn "0M"))
+  (should be float-equal
           -0.01d0
           (edn:read-edn "-0.1e-1M"))
   (should be float-equal
@@ -62,3 +65,51 @@
               (:map (:pair edn-primitives:nil edn-primitives:true)
                     (:pair edn-primitives:false edn-primitives:nil)))))
           (edn:read-edn "(#{[{nil true,false nil}]})")))
+
+(deftest maps ()
+  (should be equal
+          '(:map (:pair 1 2))
+          (edn:read-edn "{1 2 }"))
+  (should be equal
+          '(:map (:pair 1 2))
+          (edn:read-edn "{ 1 2}"))
+  (should be equal
+          '(:map (:pair 1 2))
+          (edn:read-edn "{1      2}"))
+  (should be equal
+          '(:map (:pair 1 2))
+          (edn:read-edn "{ 1 2 }"))
+  (should be equal
+          '(:map (:pair 1 2))
+          (edn:read-edn "{     1      2     }")))
+
+(deftest translate-escape ()
+  (flet ((translates-to (in out)
+           (should be eql
+                   out
+                   (edn::translate-escape in))))
+    (translates-to #\" #\")
+    (translates-to #\\ #\\)
+    (translates-to #\b (code-char 8))
+    (translates-to #\f (code-char 12))
+    (translates-to #\n (code-char 10))
+    (translates-to #\r (code-char 13))
+    (translates-to #\t (code-char 9))))
+
+(deftest .string-ending ()
+  (should be equal
+          "foobar"
+          ""
+          (smug:parse (edn::.string-ending) "foobar\""))
+  (should be equal
+          "foobar"
+          "asdf"
+          (smug:parse (edn::.string-ending) "foobar\"asdf"))
+  (should be equal
+          "foobar\"qwer"
+          "asdf"
+          (smug:parse (edn::.string-ending) "foobar\\\"qwer\"asdf"))
+  (should be equal
+          (format nil "foobar~%qwer")
+          "asdf"
+          (smug:parse (edn::.string-ending) "foobar\\nqwer\"asdf")))

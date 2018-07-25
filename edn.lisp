@@ -1,5 +1,14 @@
 (in-package :edn)
 
+(defun .0-or-more (parser)
+  (lambda (input)
+    (loop
+       for remaining-input = input then (cdr result)
+       for result = (first (funcall parser remaining-input))
+       while (and (car result) (> (length remaining-input) 0))
+       collect (car result) into matches
+       finally (return (list (cons matches remaining-input))))))
+
 (defun .satisfies (predicate &rest args)
   (.bind (.item)
          (lambda (x)
@@ -18,20 +27,16 @@
            (.identity (cons x xs)))
          (.identity ())))
 
-(defun .one-or-more (parser)
-  (.let* ((x parser)
-          (y (.zero-or-more parser)))
-    (.identity (cons x y))))
-
 (defun .elements ()
-  (.zero-or-more (.progn (.s)
-                         (.element))))
+  (.0-or-more (.progn (.s)
+                      (.element))))
 
 (defun .s ()
-  (.zero-or-more
-   (.or (.whitespace)
-        (.comment)
-        (.discarded-element))))
+  (.first
+   (.0-or-more
+    (.or (.whitespace)
+         (.comment)
+         (.discarded-element)))))
 
 (defun .whitespace ()
   (.one-of '(#\space
@@ -40,42 +45,40 @@
              #\newline
              #\,)))
 
+(defmacro read-if (s test)
+  `(when (funcall (lambda (_)
+                    ,test)
+                  (peek-char nil ,s))
+     (read-char s)))
+
+(defun parse-whitespace (s)
+  (read-if s (member _ '(#\space #\, #\tab #\return #\newline))))
+
 (defun .comment ()
   (.let* ((result (.prog2 (.char= #\;)
-                          (.zero-or-more (.and (.not (.or (.char= #\newline)
-                                                          (.char= #\nul)))
-                                               (.item)))
+                          (.first
+                           (.0-or-more
+                            (.and (.not (.or (.char= #\newline)
+                                             (.char= #\nul)))
+                                  (.item))))
                           (.or (.char= #\newline)
                                (.not (.item))))))
     (.identity (list :comment (coerce result 'string)))))
 
 (defun .discarded-element ()
   (.progn (.string= "#_")
-          (.s)
           (.element)))
 
 (defun .alt (&rest r)
   (reduce '.plus r))
 
-(defun .compound-element-start ()
-  (.or (.string= "#{")
-       (.char= #\{)
-       (.char= #\[)
-       (.char= #\()
-       (.char= #\{)))
-
-(defun .compound-element-finish (closing)
-  (lambda ()
-    (.prog1 (.first (.elements))
-            (.s)
-            (.char= closing))))
-
 (defun .map-element ()
   (.prog2 (.char= #\{)
           (.progn (.s)
-                  (.zero-or-more (.let* ((first (.prog1 (.element) (.s)))
-                                         (second (.prog1 (.element) (.s))))
-                                   (.identity (list :pair first second)))))
+                  (.first
+                   (.0-or-more (.let* ((first (.prog1 (.element) (.s)))
+                                          (second (.prog1 (.element) (.s))))
+                                    (.identity (list :pair first second))))))
           (.char= #\})))
 
 (defun .between (start-parser end-parser element-parser)
@@ -156,31 +159,45 @@
                   (name (.name)))
             (.identity (list :keyword ns name)))))
 
+(defun .juxt (a b)
+  (.let* ((first a)
+          (second b))
+    (.identity (list first second))))
+
 (defun .name ()
-  (.first (.plus (.let* ((first (.name-start-1))
-                         (rest (.zero-or-more (.name-constituent))))
-                   (.identity (format nil "~c~{~c~}" first rest)))
-                 (.let* ((first (.name-start-2))
-                         (second (.satisfies (complement #'digit-char-p)))
-                         (rest (.zero-or-more (.name-constituent))))
-                   (.identity (format nil "~c~c~{~c~}" first second rest))))))
+  (.let* ((prefix (.or (.let* ((first (.name-start-1)))
+                         (.identity (string first)))
+                       (.let* ((first (.juxt (.name-start-2)
+                                             (.satisfies (complement #'digit-char-p)))))
+                         (.identity (coerce first 'string)))))
+          (suffix (.0-or-more (.name-constituent))))
+    (.identity (concatenate 'string prefix suffix))))
+
+(defun name-start-1-p (c)
+  (member c
+          '(#\! #\* #\? #\_
+            #\$ #\% #\& #\=)))
+
+(defun name-start-2-p (c)
+  (member c '(#\. #\- #\+)))
 
 (defun .name-start-1 ()
-  (.satisfies (lambda (x)
-                (or (alpha-char-p x)
-                    (member x '(#\! #\* #\? #\_ #\$ #\% #\& #\=))))))
+  (.or (.satisfies 'alpha-char-p)
+       (.one-of '(#\! #\* #\? #\_ #\$ #\% #\& #\=))))
 
 (defun .name-start-2 ()
-  (.satisfies (lambda (x)
-                (or (alpha-char-p x)
-                    (member x '(#\. #\- #\+))))))
+  (.one-of '(#\. #\- #\+)))
+
+(defun name-constituent-p (c)
+  (or (alpha-char-p c)
+      (digit-char-p c)
+      (name-start-1-p c)
+      (name-start-2-p c)
+      (member c '(#\# #\:))))
 
 (defun .name-constituent ()
-  (.or (.name-start-1)
-       (.name-start-2)
-       (.satisfies (lambda (x)
-                     (or (digit-char-p x)
-                         (member x '(#\# #\:)))))))
+  (.satisfies 'name-constituent-p))
+
 (defun apply-sign (sign num)
   (if sign
       (ecase sign
@@ -205,7 +222,7 @@
 (defun .frac ()
   (.let* ((nums (.first
                  (.progn (.char= #\.)
-                         (.zero-or-more (.digit))))))
+                         (.0-or-more (.digit))))))
     (.identity
      (if nums
          (let ((num (parse-integer (coerce nums 'string))))
@@ -236,7 +253,7 @@
       (typecase signed
         (integer (if (member flag '(nil #\N))
                      (.identity signed)
-                     (.fail)))
+                     (.identity (coerce signed 'double-float))))
         (float (if (member flag '(nil #\M))
                    (.identity signed)
                    (.fail)))))))
@@ -266,7 +283,7 @@
 (defun .cardinal ()
   (.let* ((nums (.or (.first
                       (.let* ((first (.non-zero-digit))
-                              (rest (.zero-or-more
+                              (rest (.0-or-more
                                      (.digit))))
                         (.identity (list* first rest))))
                      (.let* ((c (.digit)))
@@ -305,26 +322,82 @@
         (.not (.char= #\\))
         (.item)))
 
-(defun .string-escape ()
-  (.let* ((esc (.or (.char= #\")
-                    (.char= #\b)
-                    (.char= #\t)
-                    (.char= #\n)
-                    (.char= #\f)
-                    (.char= #\r)
-                    (.char= #\\))))
-    (.identity (format nil "\\~c" esc))))
+(defun translate-escape (c)
+  (ecase c
+    ((#\" #\\) c)
+    (#\t #\tab)
+    (#\n #\newline)
+    (#\r #\return)
+    (#\b #\backspace)
+    (#\f #.(code-char 12))))
+
+(defun parse-string-ending-old (s)
+  (let ((pos 0)
+        (done nil))
+    (flet ((consume-char ()
+             (prog1 (elt s pos)
+               (setf done (= pos (length s)))
+               (incf pos))))
+      (let ((result (loop
+                       for char = (serapeum:case-let (next (consume-char))
+                                    (#\\ (translate-escape (consume-char)))
+                                    (#\" nil)
+                                    (t next))
+                       while char 
+                       when (= pos (length s)) do (return nil)
+                       collect char)))
+        (if result
+            (values (coerce result 'string) pos)
+            (values nil 0))))))
+
+(defun translate-escapes (s)
+  (let ((parts (coerce (fwoar.string-utils:split #\\ s) 'list)))
+    (serapeum:string-join (list* (car parts)
+                                 (mapcan (lambda (part)
+                                           (list (translate-escape (elt part 0))
+                                                 (subseq part 1)))
+                                         (cdr parts))))))
+
+(defun parse-string-ending (s)
+  (declare (optimize (speed 3))
+           (type simple-string s))
+  (loop
+     for possible-quote = (position #\" s) then (position #\" s
+                                                          :start (1+ possible-quote))
+
+     while possible-quote
+     when (not (char= #\\ (aref s (1- possible-quote)))) do
+       (return (values (translate-escapes (subseq s 0 possible-quote))
+                       (1+ possible-quote)))))
 
 (defun combine (list)
   (format nil "~{~a~}" list))
 
+(define-condition invalid-string-ending (error)
+  ())
+
 (defun .string ()
   (.let* ((string (.prog2 (.char= #\")
-                          (.zero-or-more (.or (.string-char)
-                                              (.progn (.char= #\\)
-                                                      (.string-escape))))
+                          (.first
+                           (.0-or-more (.or (.string-char)
+                                            (.let* ((escape-char (.progn (.char= #\\)
+                                                                         (.string-escape))))
+                                              (.identity (translate-escape escape-char))))))
                           (.char= #\"))))
     (.identity (list :string (combine string)))))
+
+(defun .string-ending ()
+  (lambda (input)
+    (multiple-value-bind (ending count) (parse-string-ending input)
+      (if (> count 0)
+          (list (cons ending
+                      (subseq input count)))
+          nil))))
+
+(defun .string.old ()
+  (.let* ((string (.progn (.char= #\")
+                          (.string-ending))))
+    (.identity (list :string string))))
 
 (defun read-edn (s)
   (car

@@ -10,7 +10,8 @@
                #:serapeum
                #:smug 
                :local-time
-               :uuid)
+               :uuid
+               :fwoar.lisputils)
   :in-order-to ((test-op (test-op :cl-edn/test)))
   :components ((:file "package")
                (:file "edn" :depends-on ("package" "synthesize"))
