@@ -21,7 +21,7 @@ Conceptual Model:
 +----------+      +----------------------------+
 ```
 
-![component diagram](diagram.svg?raw=true "component diagram")
+![component diagram](diagram.svg?raw=true&sanitize=true "component diagram")
 
 Systems for Components:
 -----------------------
