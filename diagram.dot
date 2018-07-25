@@ -1,0 +1,9 @@
+digraph G {
+  splines=ortho;
+  p[label="(PARSE string synthesizer)",shape=box];
+  "READ-EDN" [shape=box];
+  "SYNTHESIZER" [shape=box];
+  p -> "READ-EDN";
+  "READ-EDN" -> SYNTHESIZER;
+  SYNTHESIZER -> p [style=dashed];
+}
