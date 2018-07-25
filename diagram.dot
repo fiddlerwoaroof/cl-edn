@@ -1,9 +1,19 @@
 digraph G {
-  splines=ortho;
+  splines=true;
+  rankdir=LR;
   p[label="(PARSE string synthesizer)",shape=box];
-  "READ-EDN" [shape=box];
-  "SYNTHESIZER" [shape=box];
+  "edn string" -> p ;
   p -> "READ-EDN";
-  "READ-EDN" -> SYNTHESIZER;
-  SYNTHESIZER -> p [style=dashed];
+  p -> SYNTHESIZER[style=dashed,constraint=false,tailport=s,headport=s];
+  subgraph cluster_internals {
+    label="cl-edn";
+    color=red;
+    "READ-EDN" [shape=box,group=int];
+    ast[group=int];
+    "SYNTHESIZER" [shape=box,group=int];
+    "READ-EDN" -> ast ;
+    ast -> SYNTHESIZER ;
+  }
+  SYNTHESIZER -> "{| your data here |}";
+  
 }
