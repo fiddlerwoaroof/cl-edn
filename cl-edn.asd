@@ -11,7 +11,7 @@
                #:smug 
                :local-time
                :uuid
-               :fwoar.lisputils)
+               :fwoar-lisputils)
   :in-order-to ((test-op (test-op :cl-edn/test)))
   :components ((:file "package")
                (:file "edn" :depends-on ("package" "synthesize"))
@@ -21,14 +21,14 @@
 (defsystem :cl-edn/fset
   :depends-on (#:cl-edn
                #:fset
-               #:fwoar.lisputils)
+               #:fwoar-lisputils)
   :components ((:file "fset-synthesize")))
 
 (defsystem :cl-edn/fset-lossy
   :depends-on (#:cl-edn
                #:cl-edn/fset
                #:fset
-               #:fwoar.lisputils)
+               #:fwoar-lisputils)
   :components ((:file "fset-lossy-synthesize")))
 
 (defsystem :cl-edn/test

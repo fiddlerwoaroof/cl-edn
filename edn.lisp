@@ -100,28 +100,34 @@
   (.or (.nil)
        (.boolean)))
 
+(defun .try (pred next)
+  (lambda (input)
+    (when (funcall pred input)
+      (funcall next input))))
+
 (defun .collections ()
-  (.alt (.tag :map (.map-element))
-        (.collection :set (.string= "#{") (.char= #\}))
-        (.collection :vector (.char= #\[) (.char= #\]))
-        (.collection :list (.char= #\() (.char= #\)))))
+  (.or (.tag :map (.map-element))
+       (.collection :vector (.char= #\[) (.char= #\]))
+       (.collection :list (.char= #\() (.char= #\)))
+       (.collection :set (.string= "#{") (.char= #\}))))
 
 (defun .atoms ()
-  (.alt (.number)
-        (.symbol)
-        (.keyword)
-        (.character)
-        (.string)))
+  (.or (.number)
+       (.symbol)))
 
 (defun .element ()
   (.or (.primitive)
-       (.alt (.atoms)
-             (.collections)
-             
-             (.tag :tagged
-                   (.let* ((tag (.progn (.char= #\#) (.tag-symbol)))
-                           (element (.progn (.s) (.element))))
-                     (.identity (list tag element)))))))
+       (.atoms)
+       (.or (.try (.one-of '(#\" #\: #\\))
+                  (.or (.string)
+                       (.keyword)
+                       (.character)))
+            (.try (.one-of '(#\{ #\[ #\( #\#))
+                  (.or (.collections)
+                       (.tag :tagged
+                             (.let* ((tag (.progn (.char= #\#) (.tag-symbol)))
+                                     (element (.progn (.s) (.element))))
+                               (.identity (list tag element)))))))))
 
 (defun .nil ()
   (.and (.string= "nil")
@@ -323,15 +329,16 @@
         (.item)))
 
 (defun translate-escape (c)
-  (ecase c
+  (case c
     ((#\" #\\) c)
     (#\t #\tab)
     (#\n #\newline)
     (#\r #\return)
     (#\b #\backspace)
-    (#\f #.(code-char 12))))
+    (#\f #.(code-char 12))
+    (t c)))
 
-(defun parse-string-ending-old (s)
+(defun parse-string-ending (s)
   (let ((pos 0)
         (done nil))
     (flet ((consume-char ()
@@ -351,14 +358,17 @@
             (values nil 0))))))
 
 (defun translate-escapes (s)
-  (let ((parts (coerce (fwoar.string-utils:split #\\ s) 'list)))
+  (let* ((s (serapeum:string-replace-all "\\\\" s "\\"))
+         (parts (coerce (fwoar.string-utils:split #\\ s) 'list)))
     (serapeum:string-join (list* (car parts)
                                  (mapcan (lambda (part)
-                                           (list (translate-escape (elt part 0))
-                                                 (subseq part 1)))
+                                           (format t "~&~s~%" part)
+                                           (unless (equal part "")
+                                             (list (translate-escape (elt part 0))
+                                                   (subseq part 1))))
                                          (cdr parts))))))
 
-(defun parse-string-ending (s)
+(defun parse-string-ending-old (s)
   (declare (optimize (speed 3))
            (type simple-string s))
   (loop
@@ -388,7 +398,7 @@
 
 (defun .string-ending ()
   (lambda (input)
-    (multiple-value-bind (ending count) (parse-string-ending input)
+    (multiple-value-bind (ending count) (parse-string-ending (coerce input 'simple-string))
       (if (> count 0)
           (list (cons ending
                       (subseq input count)))
