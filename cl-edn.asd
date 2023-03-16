@@ -1,34 +1,34 @@
 ;;; -*- Mode:Lisp; Syntax:ANSI-Common-Lisp; Package: ASDF-USER -*-
 (in-package :asdf-user)
 
-(defsystem :cl-edn 
+(defsystem :cl-edn
   :description "A Common Lisp reader for EDN files"
   :author "Ed L <edward@elangley.org>"
   :license "MIT"
   :depends-on (#:alexandria
                #:uiop
                #:serapeum
-               #:smug 
+               #:smug
                :local-time
                :uuid
-               :fwoar.lisputils)
+               :fwoar-lisputils)
   :in-order-to ((test-op (test-op :cl-edn/test)))
   :components ((:file "package")
                (:file "edn" :depends-on ("package" "synthesize"))
                (:file "synthesize"
-                      :depends-on ("package"))))
+                :depends-on ("package"))))
 
 (defsystem :cl-edn/fset
   :depends-on (#:cl-edn
                #:fset
-               #:fwoar.lisputils)
+               #:fwoar-lisputils)
   :components ((:file "fset-synthesize")))
 
 (defsystem :cl-edn/fset-lossy
   :depends-on (#:cl-edn
                #:cl-edn/fset
                #:fset
-               #:fwoar.lisputils)
+               #:fwoar-lisputils)
   :components ((:file "fset-lossy-synthesize")))
 
 (defsystem :cl-edn/test

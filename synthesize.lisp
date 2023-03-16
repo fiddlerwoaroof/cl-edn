@@ -54,7 +54,7 @@
                              (methods (compute-applicable-methods
                                        #'synthesize-tag
                                        (list implementation tag-keyword synthesized-object))))
-               
+
                (synthesize-tag implementation tag-keyword synthesized-object)
                (list :tagged tag
                      synthesized-object))))))))
