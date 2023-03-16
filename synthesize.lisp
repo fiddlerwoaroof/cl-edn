@@ -45,7 +45,8 @@
   (destructuring-bind (sym obj) args
     (let ((tag (synthesize-compound implementation (car sym) (cdr sym))))
       (alexandria:switch ((symbol-name tag) :test 'string-equal)
-        ("inst" (local-time:parse-rfc3339-timestring (synthesize implementation obj)))
+        ("inst" (local-time:parse-rfc3339-timestring (synthesize implementation obj)
+                                                     :allow-missing-time-part t))
         ("uuid" (uuid:make-uuid-from-string (synthesize implementation obj)))
         (t (let ((synthesized-object (synthesize implementation obj)))
              (fw.lu:if-let* ((tag-keyword (alexandria:make-keyword
