@@ -356,7 +356,8 @@
                                  (mapcan (lambda (part)
                                            (list (translate-escape (elt part 0))
                                                  (subseq part 1)))
-                                         (cdr parts))))))
+                                         (cdr parts)))
+                          "")))
 
 (defun parse-string-ending (s)
   (declare (optimize (speed 3))
