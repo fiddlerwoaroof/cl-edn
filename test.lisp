@@ -63,7 +63,7 @@
             (:set
              (:vector
               (:map (:pair edn-primitives:nil edn-primitives:true)
-                    (:pair edn-primitives:false edn-primitives:nil)))))
+               (:pair edn-primitives:false edn-primitives:nil)))))
           (edn:read-edn "(#{[{nil true,false nil}]})")))
 
 (deftest maps ()

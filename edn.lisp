@@ -117,7 +117,7 @@
   (.or (.primitive)
        (.alt (.atoms)
              (.collections)
-             
+
              (.tag :tagged
                    (.let* ((tag (.progn (.char= #\#) (.tag-symbol)))
                            (element (.progn (.s) (.element))))
@@ -242,7 +242,7 @@
     (let* ((base-value (if float-info
                            (destructuring-bind (mantissa exp) float-info
                              (coerce (* (+ radix
-                                           (or mantissa 0))
+                                            (or mantissa 0.0))
                                         (if exp
                                             (expt 10 exp)
                                             1))
@@ -345,13 +345,13 @@
                (setf done (= pos (length s)))
                (incf pos))))
       (let ((result (loop
-                       for char = (serapeum:case-let (next (consume-char))
-                                    (#\\ (translate-escape (consume-char)))
-                                    (#\" nil)
-                                    (t next))
-                       while char 
-                       when (= pos (length s)) do (return nil)
-                       collect char)))
+                      for char = (serapeum:case-let (next (consume-char))
+                                   (#\\ (translate-escape (consume-char)))
+                                   (#\" nil)
+                                   (t next))
+                      while char
+                      when (= pos (length s)) do (return nil)
+                        collect char)))
         (if result
             (values (coerce result 'string) pos)
             (values nil 0))))))
