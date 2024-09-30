@@ -132,6 +132,11 @@
     (6 (generate-keyword))
     (7 (generate-symbol))))
 
+(defun generate-number ()
+  (ecase (random 2)
+    (0 (generate-int))
+    (1 (generate-float))))
+
 (defun compound-or-primitive (&optional (primitive-func 'generate-primitive))
   (ecase (random 10)
     (0 (%generate-edn))
