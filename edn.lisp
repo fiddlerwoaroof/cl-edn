@@ -219,21 +219,22 @@
           flag
           (.identity (list 0 0)))))
 
+(defun parse-frac (nums)
+  (let ((num (parse-integer nums)))
+    (coerce (if (= num 0)
+                0
+                (/ num
+                   (expt 10
+                         (length nums))))
+            'double-float)))
+
 (defun .frac ()
   (.let* ((nums (.first
                  (.progn (.char= #\.)
                          (.0-or-more (.digit))))))
     (.identity
      (if nums
-         (let ((num (parse-integer (coerce nums 'string))))
-           (coerce (if (= num 0)
-                       0
-                       (/ num
-                          (expt 10
-                                (floor
-                                 (1+ (log num
-                                          10))))))
-                   'double-float))
+         (parse-frac (coerce nums 'string))
          0))))
 
 (defun interpret-number (parts)
