@@ -253,11 +253,11 @@
                      (#\- (- base-value)))))
       (typecase signed
         (integer (if (member flag '(nil #\N))
-                     (.identity signed)
-                     (.identity (coerce signed 'double-float))))
+                     signed
+                     (coerce signed 'double-float)))
         (float (if (member flag '(nil #\M))
-                   (.identity signed)
-                   (.fail)))))))
+                   signed
+                   (throw 'fail nil)))))))
 
 (defun .number ()
   (flet ((.sign () (.one-of '(#\+ #\-))))
@@ -266,12 +266,17 @@
             (frac (.optional (.frac)))
             (exp (.optional (.exp)))
             (flag (.optional (.one-of '(#\N #\M)))))
-      (interpret-number
-       (list sign
-             num
-             (when (or frac exp)
-               (list frac exp))
-             flag)))))
+      (let ((result (catch 'fail
+                      (.identity
+                       (interpret-number
+                        (list sign
+                              num
+                              (when (or frac exp)
+                                (list frac exp))
+                              flag))))))
+        (if result
+            result
+            (.fail))))))
 
 (defun .exp ()
   (.progn (.char-equal #\e)
