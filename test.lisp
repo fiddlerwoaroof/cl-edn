@@ -66,6 +66,42 @@
                (:pair edn-primitives:false edn-primitives:nil)))))
           (edn:read-edn "(#{[{nil true,false nil}]})")))
 
+(deftest edn-parser-1 ()
+  (should be equal
+          '(:list)
+          (fw.lu:closing
+              (edn::parse-edn-new (make-string-input-stream
+                                   (format nil "()~%")))))
+  (should be equal
+          '(:map (:pair 1 1))
+          (fw.lu:closing
+              (edn::parse-edn-new (make-string-input-stream
+                                   "{ 1 1 }"))))
+  (should be equal
+          '(:vector 1 1)
+          (fw.lu:closing
+              (edn::parse-edn-new (make-string-input-stream
+                                   "[ 1 1 ]"))))
+  (should be equal
+          '(:set 1 1)
+          (fw.lu:closing
+              (edn::parse-edn-new (make-string-input-stream
+                                   "#{ 1   1 }"))))
+  (should be equal
+          '(:tagged (:symbol nil "foobar") (:vector 1 1))
+          (fw.lu:closing
+              (edn::parse-edn-new (make-string-input-stream
+                                   "#foobar [ 1 1 ]"))))
+  (should be equal
+          '(:list
+            (:set
+             (:vector
+              (:map (:pair edn-primitives:nil edn-primitives:true)
+               (:pair edn-primitives:false edn-primitives:nil)))))
+          (fw.lu:closing
+              (edn::parse-edn-new (make-string-input-stream
+                                   "(#{[{nil true,false nil}]})")))))
+
 (deftest maps ()
   (should be equal
           '(:map (:pair 1 2))
