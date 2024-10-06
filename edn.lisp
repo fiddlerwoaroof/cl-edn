@@ -393,13 +393,22 @@
     (#\r #\return)
     (#\b #\backspace)
     (#\f #.(code-char 12))))
+
+(defun .string-escape ()
+  (.let* ((c (.or (.one-of '(#\" #\\))
+                  (.char= #\t)
+                  (.char= #\n)
+                  (.char= #\r)
+                  (.char= #\b)
+                  (.char= #\f))))
+    (.identity (translate-escape c))))
+
 (defun .string ()
   (.let* ((string (.prog2 (.char= #\")
                           (.first
                            (.0-or-more (.or (.string-char)
-                                            (.let* ((escape-char (.progn (.char= #\\)
-                                                                         (.string-escape))))
-                                              (.identity (translate-escape escape-char))))))
+                                            (.progn (.char= #\\)
+                                                    (.string-escape)))))
                           (.char= #\"))))
     (.identity (list :string (combine string)))))
 
