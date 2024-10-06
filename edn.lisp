@@ -328,6 +328,7 @@
         (.not (.char= #\\))
         (.item)))
 
+#+(or)
 (defun translate-escape (c)
   (ecase c
     ((#\" #\\) c)
@@ -357,7 +358,8 @@
             (values nil 0))))))
 
 (defun translate-escapes (s)
-  (let ((parts (coerce (fwoar.string-utils:split #\\ s) 'list)))
+  (let ((parts (coerce (fwoar.string-utils:split #\\ s)
+                       'list)))
     (serapeum:string-join (list* (car parts)
                                  (mapcan (lambda (part)
                                            (list (translate-escape (elt part 0))
@@ -383,6 +385,14 @@
 (define-condition invalid-string-ending (error)
   ())
 
+(defun translate-escape (c)
+  (ecase c
+    ((#\" #\\) c)
+    (#\t #\tab)
+    (#\n #\newline)
+    (#\r #\return)
+    (#\b #\backspace)
+    (#\f #.(code-char 12))))
 (defun .string ()
   (.let* ((string (.prog2 (.char= #\")
                           (.first
