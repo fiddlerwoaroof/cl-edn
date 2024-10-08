@@ -203,6 +203,9 @@
   (let ((tag (read-symbol s node-handler dispatch trigger-char))
         (datum (do-read s node-handler *dispatch*)))
     (handle-parse-event node-handler
+                        :tag
+                        tag)
+    (handle-parse-event node-handler
                         :tagged
                         datum
                         :tag tag)))
@@ -238,6 +241,10 @@
   ((collectors :reader collectors :initform (make-hash-table
                                              #+sbcl #+sbcl
                                              :weakness :key))))
+(defclass printing-handler ()
+  ((collectors :reader collectors :initform (make-hash-table
+                                             #+sbcl #+sbcl
+                                             :weakness :key))))
 (defvar *handler* nil)
 
 (defgeneric handle-parse-event (handler event datum &key &allow-other-keys)
@@ -245,6 +252,21 @@
   (:method :around (handler event datum &rest r &key)
     (:printv (list handler event datum r))
     (:printv (call-next-method)))
+  (:method :before ((handler printing-handler) event datum &rest r &key)
+    (etypecase datum
+      (number (pprint (list* event datum r)))
+      (t (pprint (list* event datum r)))))
+  (:method ((handler printing-handler) event datum &key)
+    `(:ref ,(sxhash datum)))
+  (:method ((handler printing-handler) (event (eql :number)) datum &key)
+    datum)
+  (:method ((handler printing-handler) (event (eql :symbol)) datum &key)
+    datum)
+  (:method ((handler printing-handler) (event (eql :tagged)) datum &key)
+    datum)
+  (:method ((handler printing-handler) (event (eql :tagged)) datum &key)
+    datum)
+
   #+(or)
   (:method ((handler null) event datum &rest r &key)
     (apply #'handle-parse-event
@@ -254,6 +276,7 @@
            r))
   (:method ((handler collecting-handler) event datum &key)
     (list event datum))
+
   (:method ((handler collecting-handler) (event (eql :number)) datum &key)
     datum)
   (:method ((handler collecting-handler) (event (eql :symbol)) datum &key namespace)
